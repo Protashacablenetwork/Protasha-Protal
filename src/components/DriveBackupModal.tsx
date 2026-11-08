@@ -145,11 +145,21 @@ export const DriveBackupModal: React.FC<DriveBackupModalProps> = ({
       await loadBackupList();
     } catch (err: any) {
       console.error('Drive connection failed:', err);
+      let errMsg = err.message || 'অনুমতি পাওয়া যায়নি';
+      if (errMsg.includes('popup-closed-by-user') || errMsg.includes('popup_closed_by_user')) {
+        errMsg = isBn 
+          ? 'ব্রাউজার পপআপ ব্লক করা হয়েছে। দয়া করে ব্রাউজার সেটিংস থেকে পপআপ এলাউ করুন অথবা তাৎক্ষণিক ব্যাকআপের জন্য "লোকাল JSON ব্যাকআপ" ট্যাব ব্যবহার করুন।' 
+          : 'Popup blocked. Please allow popups or use Local JSON Backup tab.';
+      } else if (errMsg.includes('unauthorized-domain')) {
+        errMsg = isBn 
+          ? 'এই ডোমেইনটি ফায়ারবেসে অনুমোদিত নয়। দয়া করে "লোকাল JSON ব্যাকআপ" অপশন ব্যবহার করুন যা ১০০% কাজ করে।' 
+          : 'Domain not authorized. Please use Local JSON Backup tab.';
+      }
       setStatusMessage({
         type: 'error',
         text: isBn 
-          ? `গুগল ড্রাইভ সংযোগ ব্যর্থ হয়েছে: ${err.message || 'অনুমতি পাওয়া যায়নি'}` 
-          : `Failed to connect Google Drive: ${err.message || 'Permission denied'}`
+          ? `গুগল ড্রাইভ সংযোগ ব্যর্থ: ${errMsg}` 
+          : `Drive connection failed: ${errMsg}`
       });
     } finally {
       setIsAuthLoading(false);
@@ -704,35 +714,47 @@ export const DriveBackupModal: React.FC<DriveBackupModalProps> = ({
 
                 {/* Bottom: Connection details / Sign In CTA */}
                 {!isConnected ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                    <div className="space-y-0.5 max-w-md">
-                      <p className="text-slate-700 dark:text-slate-300 text-xs font-medium leading-relaxed">
-                        {isBn 
-                          ? 'প্রত্যাশা ক্যাবল নেটওয়ার্কের সকল গ্রাহক খতিয়ান, দৈনিক আয়-ব্যয় ও মাসিক বেতন ডাটাবেস ক্লাউডে সুরক্ষিত রাখতে আপনার গুগল জিমেইল একাউন্ট যুক্ত করুন।' 
-                          : 'Connect your Google Gmail account to keep all customer ledgers, daily accounts and salaries safe in Google Drive.'}
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        {isBn ? '• গুগল ড্রাইভের "Admin_Backups" ফোল্ডারে সম্পূর্ণ স্বয়ংক্রিয় ব্যাকআপ থাকবে' : '• Stored safely in your Drive Admin_Backups folder'}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={handleConnectDrive}
-                      disabled={isAuthLoading}
-                      className="gsi-material-button w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border-2 border-rose-300 hover:border-[#E52E2E] dark:border-slate-700 font-extrabold text-xs shadow-sm transition-all cursor-pointer active:scale-98 disabled:opacity-50 shrink-0 group"
-                    >
-                      <div className="gsi-material-button-icon w-4.5 h-4.5 shrink-0 flex items-center justify-center">
-                        <svg viewBox="0 0 48 48" className="w-4.5 h-4.5">
-                          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                        </svg>
+                  <div className="space-y-3 pt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-0.5 max-w-md">
+                        <p className="text-slate-700 dark:text-slate-300 text-xs font-medium leading-relaxed">
+                          {isBn 
+                            ? 'প্রত্যাশা ক্যাবল নেটওয়ার্কের সকল গ্রাহক খতিয়ান, দৈনিক আয়-ব্যয় ও মাসিক বেতন ডাটাবেস ক্লাউডে সুরক্ষিত রাখতে আপনার গুগল জিমেইল একাউন্ট যুক্ত করুন।' 
+                            : 'Connect your Google Gmail account to keep all customer ledgers, daily accounts and salaries safe in Google Drive.'}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          {isBn ? '• গুগল ড্রাইভের "Admin_Backups" ফোল্ডারে সম্পূর্ণ স্বয়ংক্রিয় ব্যাকআপ থাকবে' : '• Stored safely in your Drive Admin_Backups folder'}
+                        </p>
                       </div>
-                      <span className="text-slate-800 dark:text-slate-100 group-hover:text-[#E52E2E] transition-colors">
-                        {isAuthLoading ? (isBn ? 'কানেক্ট হচ্ছে...' : 'Connecting...') : (isBn ? 'গুগল দিয়ে জিমেইল কানেক্ট করুন' : 'Sign in with Google')}
-                      </span>
-                    </button>
+
+                      <button
+                        onClick={handleConnectDrive}
+                        disabled={isAuthLoading}
+                        className="gsi-material-button w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border-2 border-rose-300 hover:border-[#E52E2E] dark:border-slate-700 font-extrabold text-xs shadow-sm transition-all cursor-pointer active:scale-98 disabled:opacity-50 shrink-0 group"
+                      >
+                        <div className="gsi-material-button-icon w-4.5 h-4.5 shrink-0 flex items-center justify-center">
+                          <svg viewBox="0 0 48 48" className="w-4.5 h-4.5">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                          </svg>
+                        </div>
+                        <span className="text-slate-800 dark:text-slate-100 group-hover:text-[#E52E2E] transition-colors">
+                          {isAuthLoading ? (isBn ? 'কানেক্ট হচ্ছে...' : 'Connecting...') : (isBn ? 'গুগল দিয়ে জিমেইল কানেক্ট করুন' : 'Sign in with Google')}
+                        </span>
+                      </button>
+                    </div>
+                    <div className="pt-2.5 border-t border-rose-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{isBn ? 'ড্রাইভ পপআপে সমস্যা হলে তাৎক্ষণিক ব্যাকআপ ব্যবহার করুন:' : 'Having popup issues? Use instant backup:'}</span>
+                      <button
+                        onClick={() => setActiveTab('local')}
+                        className="font-bold text-[#E52E2E] hover:underline cursor-pointer inline-flex items-center gap-1 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-900"
+                      >
+                        <HardDrive className="w-3.5 h-3.5" />
+                        <span>{isBn ? 'লোকাল JSON ব্যাকআপ (১০০% সচল)' : 'Local JSON Backup'}</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 shadow-2xs">
